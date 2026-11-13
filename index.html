@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Флаг единства — Россия в наших словах</title>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{--ink:#17243a;--muted:#68758b;--paper:#f5f7fb;--blue:#2455ad;--red:#d83b45}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--paper);color:var(--ink)}
+button,input{font:inherit}button{border:0;border-radius:12px;padding:12px 18px;font-weight:700;cursor:pointer;background:#17243a;color:white}
+button:disabled{opacity:.5;cursor:not-allowed}.wrap{max-width:1200px;margin:auto;padding:22px}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+h1{font-size:clamp(25px,4vw,42px);margin:4px 0} .sub{color:var(--muted);margin:0 0 18px}
+.panel{background:white;border-radius:20px;padding:18px;box-shadow:0 8px 28px #18243a12}
+.admin-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;margin-top:18px}
+.stage{background:#101d35;border-radius:18px;padding:20px;min-height:490px;color:white;position:relative;overflow:hidden}
+.stage h2{text-align:center;font-size:clamp(20px,3vw,30px);margin:0 0 12px}
+.flag{display:flex;flex-direction:column;gap:8px;height:350px}
+.stripe{flex:1;position:relative;overflow:hidden;border-radius:8px;display:flex;flex-wrap:wrap;align-content:center;justify-content:center;gap:7px;padding:10px}
+.stripe.white{background:#fff;color:#26344b}.stripe.blue{background:#2455ad;color:#fff}.stripe.red{background:#d83b45;color:#fff}
+.word{font-weight:800;line-height:1.1;padding:5px 9px;border-radius:8px;background:#ffffff30;text-shadow:0 1px 2px #0002;animation:pop .65s cubic-bezier(.2,.8,.2,1) both;max-width:100%;overflow-wrap:anywhere}
+@keyframes pop{0%{opacity:0;transform:translateY(-28px) rotate(-5deg) scale(.7)}70%{transform:translateY(4px) rotate(2deg) scale(1.05)}100%{opacity:1;transform:none}}
+.endline{text-align:center;font-size:clamp(20px,3vw,32px);font-weight:900;letter-spacing:.04em;margin:14px 0 0}
+.side{display:flex;flex-direction:column;gap:14px}.qrbox{display:grid;place-items:center;min-height:210px;background:#fff;border-radius:14px;padding:10px}
+.qrbox canvas,.qrbox img{max-width:100%}.small{font-size:13px;color:var(--muted);line-height:1.45}.status{font-size:13px;padding:8px 10px;background:#eef3fa;border-radius:10px}
+.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1}
+input[type=text]{width:100%;padding:13px;border:1px solid #ccd5e2;border-radius:12px;font-size:17px}
+.colors{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}
+.color{padding:14px 5px;border:3px solid transparent;border-radius:12px;font-weight:800;background:#eee;color:#17243a}
+.color[data-c="white"]{background:#fff;border-color:#dce2eb}.color[data-c="blue"]{background:#2455ad;color:white}.color[data-c="red"]{background:#d83b45;color:white}
+.color.selected{outline:4px solid #f4c542;outline-offset:2px}
+.join-card{max-width:520px;margin:5vh auto;padding:24px}.join-card h1{font-size:30px}
+.hidden{display:none!important}.notice{padding:12px;border-radius:12px;background:#fff7df;color:#70551a;font-size:13px}
+@media(max-width:850px){.admin-grid{grid-template-columns:1fr}.stage{min-height:400px}.flag{height:290px}.side{display:grid;grid-template-columns:1fr 1fr}}
+@media(max-width:540px){.wrap{padding:12px}.side{display:flex}.stage{padding:12px}.flag{height:270px}}
+</style>
+</head>
+<body>
+<div id="joinView" class="hidden">
+  <div class="panel join-card">
+    <h1>Флаг единства</h1>
+    <p class="sub">Россия в наших словах</p>
+    <p>Выберите цвет и напишите одно слово, которое, по вашему мнению, объединяет людей.</p>
+    <div class="colors">
+      <button class="color selected" data-c="white" type="button">БЕЛЫЙ</button>
+      <button class="color" data-c="blue" type="button">СИНИЙ</button>
+      <button class="color" data-c="red" type="button">КРАСНЫЙ</button>
+    </div>
+    <label for="wordInput"><b>Ваше слово</b></label>
+    <input id="wordInput" type="text" maxlength="24" placeholder="Например, Дружба" autocomplete="off">
+    <p class="small">Пожалуйста, отправляйте одно доброе слово без фамилий и личных данных.</p>
+    <button id="sendBtn" style="width:100%">Отправить слово</button>
+    <p id="joinMsg" class="status" aria-live="polite">Выберите цвет и введите слово.</p>
+  </div>
+</div>
+
+<div id="adminView">
+  <div class="wrap">
+    <header>
+      <div><h1>Флаг единства</h1><p class="sub">Россия в наших словах</p></div>
+      <div class="row" style="max-width:440px">
+        <button id="startBtn">Начать</button>
+        <button id="musicBtn" type="button">Включить музыку</button>
+        <button id="fullBtn" type="button">На весь экран</button>
+      </div>
+    </header>
+    <div class="admin-grid">
+      <main class="stage">
+        <h2>Нас объединяют наши ценности</h2>
+        <div class="flag">
+          <div class="stripe white" id="whiteWords" aria-label="Белая полоса"></div>
+          <div class="stripe blue" id="blueWords" aria-label="Синяя полоса"></div>
+          <div class="stripe red" id="redWords" aria-label="Красная полоса"></div>
+        </div>
+        <div class="endline" id="endline">РОССИЯ — ЭТО МЫ!</div>
+      </main>
+      <aside class="side">
+        <section class="panel">
+          <b>Подключитесь к активности</b>
+          <div class="qrbox" id="qrcode"></div>
+          <p class="small">Наведите камеру смартфона на QR-код, выберите цвет и отправьте слово.</p>
+          <div class="status" id="connection">Подключение к базе данных не настроено</div>
+        </section>
+        <section class="panel">
+          <b>Управление</b>
+          <p class="small">После завершения активности можно очистить флаг для следующего запуска.</p>
+          <div class="row"><button id="clearBtn" style="background:#a52b36">Очистить слова</button></div>
+          <p class="small" id="count">Получено слов: 0</p>
+        </section>
+        <section class="notice">Перед мероприятием проверьте работу с двух устройств и откройте страницу ведущего на компьютере, подключённом к интерактивной доске.</section>
+      </aside>
+    </div>
+  </div>
+</div>
+<script>
+// 1. Вставьте сюда настройки Firebase из консоли Firebase (см. README).
+const firebaseConfig = {
+  apiKey: "AIzaSyA4GgvUdbfAA9h-0xVUuV9tNXw2_b4NKFc",
+  authDomain: "flag-unity-school31.firebaseapp.com",
+  databaseURL: "https://flag-unity-school31-default-rtdb.firebaseio.com",
+  projectId: "flag-unity-school31",
+  appId: "flag-unity-school31.firebasestorage.app"
+};
+// 2. Смените код комнаты перед мероприятием. Используйте латинские буквы и цифры.
+const ROOM_CODE = "ROOM_COD";
+
+const params = new URLSearchParams(location.search);
+const isJoin = params.get("join") === "1";
+const $ = id => document.getElementById(id);
+let db = null, selectedColor = "white", knownIds = new Set(), started = false;
+let audioCtx = null, musicTimer = null, musicOn = false;
+const colors = {white:"whiteWords", blue:"blueWords", red:"redWords"};
+const validConfig = firebaseConfig.apiKey !== "ВСТАВЬТЕ_API_KEY" &&
+  !firebaseConfig.databaseURL.includes("ВАШ-ПРОЕКТ");
+
+function setStatus(message){ const el=$("connection"); if(el) el.textContent = message; }
+function showJoin(){
+  $("adminView").classList.add("hidden"); $("joinView").classList.remove("hidden");
+}
+function safeText(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function renderWord(id, item){
+  if(!item || !colors[item.color] || !item.word) return;
+  if(knownIds.has(id)) return;
+  knownIds.add(id);
+  const el=document.createElement("span"); el.className="word"; el.textContent=item.word;
+  const size=Math.min(30,Math.max(16,15+String(item.word).length*.65));
+  el.style.fontSize=size+"px";
+  $(colors[item.color]).appendChild(el);
+  updateCount();
+}
+function updateCount(){ $("count").textContent="Получено слов: "+knownIds.size; }
+function connect(){
+  if(!validConfig){setStatus("Сначала настройте Firebase в начале файла index.html (инструкция в README).");return;}
+  try{
+    firebase.initializeApp(firebaseConfig);
+    db=firebase.database();
+    db.ref(".info/connected").on("value",s=>setStatus(s.val()?"Подключено — слова поступают в реальном времени":"Нет соединения с базой данных"));
+    db.ref("events/"+ROOM_CODE+"/words").on("child_added",s=>renderWord(s.key,s.val()),e=>setStatus("Ошибка чтения: "+e.message));
+  }catch(e){setStatus("Не удалось подключиться: "+e.message);}
+}
+function makeQR(){
+  const joinUrl=location.origin+location.pathname+"?join=1";
+  if(window.QRCode){new QRCode($("qrcode"),{text:joinUrl,width:190,height:190,colorDark:"#17243a",colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.M});}
+  else {$("qrcode").textContent="QR-код не загрузился. Проверьте интернет.";}
+}
+async function sendWord(){
+  const word=$("wordInput").value.trim().replace(/\s+/g," ");
+  if(!word){$("joinMsg").textContent="Введите слово.";return;}
+  if(word.length>24){$("joinMsg").textContent="Сделайте слово короче (до 24 символов).";return;}
+  if(!db){$("joinMsg").textContent="Форма пока не подключена. Сообщите организатору.";return;}
+  $("sendBtn").disabled=true;
+  try{
+    await db.ref("events/"+ROOM_CODE+"/words").push({word,color:selectedColor,createdAt:firebase.database.ServerValue.TIMESTAMP});
+    $("wordInput").value=""; $("joinMsg").textContent="Спасибо! Ваше слово добавлено во флаг.";
+  }catch(e){$("joinMsg").textContent="Не удалось отправить. Проверьте интернет и попробуйте ещё раз.";}
+  $("sendBtn").disabled=false;
+}
+function startMusic(){
+  const AC=window.AudioContext||window.webkitAudioContext;
+  if(!AC){alert("Звуковые эффекты не поддерживаются этим браузером.");return;}
+  if(!audioCtx) audioCtx=new AC();
+  audioCtx.resume();
+  musicOn=!musicOn;
+  $("musicBtn").textContent=musicOn?"Выключить музыку":"Включить музыку";
+  if(musicTimer){clearInterval(musicTimer);musicTimer=null;}
+  if(musicOn){
+    // Небольшая оригинальная торжественная электронная мелодия без сторонней аудиозаписи.
+    const notes=[261.63,329.63,392.00,523.25,392.00,329.63,293.66,349.23];
+    let i=0;
+    const play=()=>{
+      if(!musicOn||!audioCtx)return;
+      const now=audioCtx.currentTime, osc=audioCtx.createOscillator(), gain=audioCtx.createGain();
+      osc.type="sine";osc.frequency.value=notes[i++%notes.length];
+      gain.gain.setValueAtTime(.0001,now);gain.gain.exponentialRampToValueAtTime(.07,now+.08);gain.gain.exponentialRampToValueAtTime(.0001,now+.8);
+      osc.connect(gain);gain.connect(audioCtx.destination);osc.start(now);osc.stop(now+.82);
+    };
+    play();musicTimer=setInterval(play,650);
+  }
+}
+if(isJoin){
+  showJoin();
+  document.querySelectorAll(".color").forEach(b=>b.addEventListener("click",()=>{
+    selectedColor=b.dataset.c;document.querySelectorAll(".color").forEach(x=>x.classList.toggle("selected",x===b));
+  }));
+  $("sendBtn").addEventListener("click",sendWord);
+  $("wordInput").addEventListener("keydown",e=>{if(e.key==="Enter")sendWord();});
+}else{
+  makeQR();
+  $("startBtn").addEventListener("click",()=>{started=true;$("endline").textContent="РОССИЯ — ЭТО МЫ!";$("startBtn").textContent="Активность идёт";$("startBtn").disabled=true;});
+  $("musicBtn").addEventListener("click",startMusic);
+  $("fullBtn").addEventListener("click",()=>{if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();else document.exitFullscreen?.();});
+  $("clearBtn").addEventListener("click",async()=>{
+    if(!db){alert("Сначала настройте Firebase.");return;}
+    if(confirm("Удалить все слова текущей активности?")){await db.ref("events/"+ROOM_CODE+"/words").remove();knownIds.clear();Object.values(colors).forEach(id=>$(id).innerHTML="");updateCount();}
+  });
+}
+if(validConfig){connect();} // join mode connects here too
+</script>
+</body>
+</html>
